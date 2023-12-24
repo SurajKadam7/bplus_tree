@@ -29,9 +29,15 @@ func Test_tree_Delete(t1 *testing.T) {
 		t.Put(key, i)
 	}
 
+	display(&t)
+	fmt.Println("--------------------------------------")
 	delete := []int{40, 5, 45, 35, 25, 55, 20, 30, 15}
 	for _, key := range delete {
+		fmt.Printf("key -> %d\n", key)
 		t.Delete(key)
+		display(&t)
+		fmt.Println("--------------------------------------")
+
 	}
 	fmt.Println(t.root)
 }

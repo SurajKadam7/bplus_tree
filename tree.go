@@ -1,6 +1,9 @@
 package tree
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 const (
 	// degree represents max number of chids in one node
@@ -332,6 +335,14 @@ func (n *node) balance(key int) {
 		truncate[*node](&n2.childs, len(n2.childs))
 	}
 
+	// remove the n2 node first value from the parent
+	if len(n2.keys) > 0 && n.parent.keys[myNodeInd-1] == n2.keys[0] && n2.keys[0] != key {
+		// if key present it will be on n2 (child index - 1) in parent
+		fmt.Println("abcd : ", n2.keys[0])
+		// removeAt[int](&n.parent.keys, myNodeInd-1)
+		truncate[int](&n2.keys, len(n2.keys))
+	}
+
 	// re-assigning next pointer
 	n1.next = n2.next
 	n2.next = nil
@@ -339,14 +350,6 @@ func (n *node) balance(key int) {
 	// remove the current node from child of parent
 	removeAt[*node](&n.parent.childs, myNodeInd)
 	reAssignParent(n1, n2Childs)
-	// // remove the n2 node first value from the parent
-	// if len(n2.keys) > 0 && n.parent.keys[myNodeInd-1] == n2.keys[0] {
-	// 	// if key present it will be on n2 (child index - 1) in parent
-	// 	removeAt[int](&n.parent.keys, n2.keys[0])
-	// 	truncate[int](&n2.keys, len(n2.keys))
-	// } else if len(n2.keys) > 0 {
-	// 	panic("keys are not arranged correctly")
-	// }
 
 	n1.balance(key)
 }
