@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -336,10 +335,9 @@ func (n *node) balance(key int) {
 	}
 
 	// remove the n2 node first value from the parent
-	if len(n2.keys) > 0 && n.parent.keys[myNodeInd-1] == n2.keys[0] && n2.keys[0] != key {
+	if len(n2.keys) > 0 && n.parent.keys[myNodeInd-1] == n2.keys[0] {
 		// if key present it will be on n2 (child index - 1) in parent
-		fmt.Println("abcd : ", n2.keys[0])
-		// removeAt[int](&n.parent.keys, myNodeInd-1)
+		removeAt[int](&n.parent.keys, myNodeInd-1)
 		truncate[int](&n2.keys, len(n2.keys))
 	}
 
