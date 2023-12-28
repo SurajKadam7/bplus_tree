@@ -6,11 +6,19 @@ import (
 
 const (
 	// degree represents max number of chids in one node
-	degree int = 4 //minKey = 1, maxKey = 2
+	degree int = 3 //minKey = 1, maxKey = 2
 )
 
-func getMinKeys() int {
+func getMinChilds() int {
 	return (degree + 1) / 2
+}
+
+func getMaxChilds() int {
+	return degree
+}
+
+func getMinKeys() int {
+	return (degree+1)/2 - 1
 }
 
 func getMaxKeys() int {
@@ -51,6 +59,7 @@ func pop[T any](s *[]T) (out T) {
 
 // truncate truncates this instance at index so that it contains only the
 // first index items. index must be less than or equal to length.
+// index = 0 means truncate all
 func truncate[T any](s *[]T, index int) {
 	var toClear []T
 	*s, toClear = (*s)[:index], (*s)[index:]
@@ -139,17 +148,22 @@ func findItemInd(n *node, key int) int {
 // key : child value
 // it will return the index of child node using its
 func findChildInd(p *node, key int) int {
+	isEmpty := false
+	emptyInd := 0
+
 	i := sort.Search(len(p.childs), func(i int) bool {
 		ind := len(p.childs[i].keys) - 1
 		if ind < 0 {
+			isEmpty = true
+			emptyInd = i
 			// this means that the key is removed from this child node
 			return true
 		}
 		return !(p.childs[i].keys[ind] < key)
 	})
 
-	if i < len(p.childs) && p.childs[i].keys[0] > key {
-		i -= 1
+	if isEmpty {
+		return emptyInd
 	}
 	return i
 }
@@ -293,145 +307,154 @@ func (n *node) borrow(neighbour *node, nInd int, ind int) {
 	}
 }
 
-// balance will help tree to balance after deleting operation
-func (n *node) balance(key int) {
-	// handling parent diffently
-	if n.parent == nil {
-		// If root node is a branch and only has one node then collapse it.
-		if !n.isLeaf && len(n.keys) == 1 {
-			// Move root's child up.
-			child := n.childs[0]
-			n.isLeaf = child.isLeaf
-			n.keys = child.keys[:]
-			n.childs = child.childs
+func (n *node) borrowKey(neighbour *node, nInd int, ind int) {
+	key := removeAt[int](&neighbour.keys, nInd)
+	insertAt[int](&n.keys, ind, key)
+}
 
-			// Reparent all child nodes being moved.
-			for _, node := range n.childs {
-				if node.childs != nil {
-					child.parent = n
-				}
-			}
-			// Remove old child.
-			child.parent = nil
-		}
+// getSmallest will return the smallest node in the give node tree
+func getSmallest(n *node) int {
+	tmp := n
+	for !tmp.isLeaf {
+		tmp = tmp.childs[0]
+	}
+	return tmp.keys[0]
+}
+
+// merging will only happen for the root nodes
+// for deletion in the intermediate node only replacement happen
+func (n *node) balanceV2(key int) {
+	p := n.parent
+	if len(n.keys) >= getMinKeys() || p == nil {
 		return
 	}
 
-	// checking balancing required or not
-	if len(n.keys) >= getMinKeys() {
-		return
-	}
-
-	// need to find the current node child index in parent
 	myNodeInd := findChildInd(n.parent, key)
 
 	// BORROW LOGIC
 	l := getLeftNode(n, myNodeInd)
 	if l != nil && len(l.keys) > getMinKeys() {
-		// we always borrow the last element from the left neighbour
-		i := myNodeInd
-		oldKey := key
-
-		n.borrow(l, len(l.keys)-1, 0)
-		if i < len(l.parent.keys) && l.parent.keys[i] == oldKey {
-			n.parent.keys[i] = l.keys[0]
+		if n.isLeaf {
+			// direct borrow and change the parent of current node
+			n.borrow(l, len(l.keys)-1, 0)
+			n.parent.keys[myNodeInd-1] = n.keys[0]
+		} else {
+			// borrow from the parent and copy the child through borrow
+			// TODO : check is this logic is correct
+			n.borrowKey(n.parent, myNodeInd-1, 0)
+			n.parent.borrowKey(l, len(l.keys)-1, myNodeInd-1)
+			// removing the child logic
+			lChild := removeAt[*node](&l.childs, len(l.childs)-1)
+			lChild.parent = n
+			insertAt[*node](&n.childs, 0, lChild)
 		}
-		// TODO :  check can we use the below line of code to change the key insted of above find logic
-		// n.parent.keys[myNodeInd-1] = n.keys[0]
+
 		return
 	}
 
 	r := getRightNode(n, myNodeInd)
 	if r != nil && len(r.keys) > getMinKeys() {
-		i := findItemInd(r.parent, r.keys[0])
-		oldKey := r.keys[0]
+		if n.isLeaf {
+			n.borrow(r, 0, len(n.keys))
+			r.parent.keys[myNodeInd] = r.keys[0]
+		} else {
+			n.borrowKey(n.parent, 0, len(n.keys))
+			n.parent.borrowKey(r, 0, 0)
 
-		n.borrow(r, 0, len(n.keys))
-		if i < len(l.parent.keys) && l.parent.keys[i] == oldKey {
-			n.parent.keys[i] = r.keys[0]
+			// removig child logic
+			rChild := removeAt[*node](&r.childs, 0)
+			rChild.parent = n
+			insertAt[*node](&n.childs, len(n.childs), rChild)
 		}
-		// TODO :  check can we use the below line of code to change the key insted of above find logic
-		// r.parent.keys[myNodeInd] = r.keys[0]
+
 		return
 	}
 
-	// MERGE LOGIC
-	// always merge into the left node as this will be append operation
-	// for coping data
-
+	// merging process
 	var left, right *node
 	// this right key declaration is just to handle zero key in the current node
 	// for which balancing is happening
-	var rightKey int
-	if l != nil {
-		left, right = l, n
-		rightKey = key
-	} else {
+
+	rightNodeInd := myNodeInd
+	left, right = l, n
+	if left == nil {
 		left, right = n, r
-		myNodeInd += 1
-		rightKey = right.keys[0]
+		rightNodeInd += 1
 	}
 
-	// removing child from the right nodes
-	// changing parent of the right node
-	// appending all the chlds into left node
-	// adding all keys to the left node from right node
-	// removing rightNode from parent of right and left
-	// removing key of right node from parent
-	// calling rebalance on parent
-
-	// merging and truncating nodes
-	left.keys = append(left.keys, right.keys...)
 	if left.isLeaf {
+		left.keys = append(left.keys, right.keys...)
 		left.values = append(left.values, right.values...)
-		truncate[int](&right.values, len(right.values))
-	} else {
-		left.childs = append(left.childs, right.childs...)
-		reAssignParent(left, len(right.childs))
-		truncate[*node](&right.childs, len(right.childs))
-	}
 
-	// re-assigning next pointer
-	left.next = right.next
-	right.next = nil
+		removeAt[int](&n.parent.keys, rightNodeInd-1)   // removed the key from parent
+		removeAt[*node](&n.parent.childs, rightNodeInd) // removed the child from parent
+		left.next = right.next                          // pointer change
 
-	// remove the right node from child of parent
-	removeAt[*node](&n.parent.childs, myNodeInd)
-	// removing key of the right node from the parent
-	itemInd := findItemInd(left.parent, rightKey)
-	if itemInd < len(left.parent.keys) && left.parent.keys[itemInd] == rightKey {
-		removeAt[int](&n.parent.keys, itemInd)
-	}
-
-	// deleting all the keys in the n2
-	truncate[int](&right.keys, len(right.keys))
-
-	if len(left.parent.keys) == 0 {
-		left.parent.balance(key)
+		// cleanup of the right node
+		right.next = nil
+		truncate[int](&right.keys, 0)
+		truncate[int](&right.values, 0)
+		if len(left.parent.keys) == 0 {
+			left.parent.balanceV2(key)
+			return
+		}
+		left.parent.balanceV2(left.parent.keys[0])
 		return
 	}
-	left.parent.balance(left.parent.keys[0])
+
+	c1 := 0
+	c2 := 0
+	parent := left.parent
+	cp := make([]*node, len(parent.childs))
+	copy(cp, parent.childs)
+	truncate[*node](&parent.childs, 0)
+
+	for _, nn := range cp {
+		for _, key := range nn.keys {
+			insertAt[int](&parent.keys, c1, key)
+			c1++
+		}
+		truncate[int](&nn.keys, 0)
+		for _, child := range nn.childs {
+			insertAt[*node](&parent.childs, c2, child)
+			child.parent = parent
+			c2++
+		}
+		truncate[*node](&nn.childs, 0)
+		nn.childs = nil
+		nn.parent = nil
+		// to keep the key in the parent
+		c1++
+	}
+	if len(parent.keys) == 0 {
+		parent.balanceV2(key)
+		return
+	}
+	parent.balanceV2(parent.keys[0])
 }
 
 func delete(key int, kps []keyPosition) {
-	for i := len(kps) - 1; i >= 0; i-- {
-		// starting from the leaf node
-		kp := kps[i]
-		nn, ii := kp.n, kp.ind
-		// this condition is possible for the intermediate node
-		// if the removal of the leaf node cause removal till the intermediate node
-		if nn == nil || len(nn.keys) <= ii || nn.keys[ii] != key {
-			continue
-		}
+	leftInd := len(kps) - 1
+	nn, ii := kps[leftInd].n, kps[leftInd].ind
 
-		// remove key and value
-		removeAt[int](&nn.keys, ii)
-		if nn.isLeaf {
-			removeAt[int](&nn.values, ii)
-		}
-
-		nn.balance(key)
+	// remove key and value
+	removeAt[int](&nn.keys, ii)
+	if nn.isLeaf {
+		removeAt[int](&nn.values, ii)
 	}
+	nn.balanceV2(key)
+
+	if len(kps) == 1 {
+		return
+	}
+
+	nn, ii = kps[0].n, kps[0].ind
+
+	// remove key and value
+	if len(nn.keys) <= ii || nn.keys[ii] != key {
+		return
+	}
+	nn.keys[ii] = getSmallest(nn.childs[ii+1])
 }
 
 func (t *tree) Put(key int, value int) {
@@ -476,8 +499,14 @@ func (t *tree) Delete(key int) {
 	}
 
 	delete(key, kps)
-	if len(t.root.keys) == 0 {
+	if t.root.isLeaf && len(t.root.keys) == 0 {
 		t.root = nil
+		return
+	}
+
+	if len(t.root.childs) == 1 {
+		t.root = t.root.childs[0]
+		t.root.parent = nil
 	}
 }
 

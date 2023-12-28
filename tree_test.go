@@ -24,14 +24,14 @@ func Test_tree_Put(t1 *testing.T) {
 
 func Test_tree_Delete(t1 *testing.T) {
 	t := tree{}
-	keys := []int{5, 15, 25, 35, 45, 55, 40, 30, 20}
+	keys := []int{1, 7, 20, 25, 31, 42, 17, 28, 21, 19, 10, 4}
 	for i, key := range keys {
 		t.Put(key, i)
 	}
 
 	display(&t)
 	fmt.Println("--------------------------------------")
-	delete := []int{40, 5, 45, 35, 25, 55, 20, 30, 15}
+	delete := []int{21, 31, 20, 10, 7, 25, 42, 4, 1, 19, 17, 28}
 	for _, key := range delete {
 		fmt.Printf("key -> %d\n", key)
 		t.Delete(key)
@@ -43,25 +43,43 @@ func Test_tree_Delete(t1 *testing.T) {
 }
 
 func Test_separate(t1 *testing.T) {
-	insert := "40 25 20 30 35 5 15 55 45"
-	delete := "15 45 5 35 40 20 25 30 55"
+	insert := "190 497 69 237 482 988 60 644 609 768"
+	delete := "60 988 644 482 237 768 69 609 190 497"
 	insrt := stringToSlice(insert)
 	t := newTree(insrt)
 	eld := stringToSlice(delete)
 	fmt.Println(eld)
-	deleteItems(t, eld)
+	deleteItems(t, eld, true)
 }
 
-func Test_tree_delete(t1 *testing.T) {
-	tempValues := []int{5, 15, 25, 35, 45, 55, 40, 30, 20}
+func createRandArray(size int) []int {
+	arr := make([]int, size)
+	m := make(map[int]struct{})
+	for len(m) != size {
+		key := rand.Intn(1000) + 1
+		m[key] = struct{}{}
+	}
 
-	for i := 0; i < 10; i++ {
+	i := 0
+	for key := range m {
+		arr[i] = key
+		i++
+	}
+	return arr
+}
+// [962 28 887 73 902 861 20 282 430 491 585 821 979 855 140 900 672 286 573 993] [672 430 20 900 962 821 28 902 585 573 855 73 861 887 140 491 979 993 282 286]
+// [190 497 69 237 482 988 60 644 609 768] [60 988 644 482 237 768 69 609 190 497]
+func Test_tree_delete(t1 *testing.T) {
+	numKeys := 10
+	tempValues := createRandArray(numKeys)
+
+	for i := 0; i < 50; i++ {
 		insert := getRandomSlice(tempValues)
 		deleteElm := getRandomSlice(tempValues)
 		fmt.Println(insert, deleteElm)
 		fmt.Println()
 		t := newTree(insert)
-		deleteItems(t, deleteElm)
+		deleteItems(t, deleteElm, false)
 		fmt.Printf("------------   done  ------------------\n\n")
 	}
 }
@@ -99,13 +117,18 @@ func newTree(insertElm []int) *tree {
 	return t
 }
 
-func deleteItems(t *tree, deleteElm []int) {
+func deleteItems(t *tree, deleteElm []int, dispaly bool) {
 	for _, key := range deleteElm {
 		t.Delete(key)
-		fmt.Println("---> ", key)
-		display(t)
-		if t.root != nil {
-			fmt.Printf("------------------------------\n")
+		if dispaly {
+			fmt.Println("---> ", key)
+			display(t)
+			if t.root != nil {
+				fmt.Printf("------------------------------\n")
+			}
 		}
+	}
+	if t.root != nil {
+		panic("root is not empty")
 	}
 }
