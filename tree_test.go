@@ -43,11 +43,14 @@ func Test_tree_Delete(t1 *testing.T) {
 }
 
 func Test_separate(t1 *testing.T) {
-	insert := "190 497 69 237 482 988 60 644 609 768"
-	delete := "60 988 644 482 237 768 69 609 190 497"
+	insert := "20 50 24 5 42"
+	delete := "5 50 20 42 24"
+	fmt.Printf("minChilds : %d\n\n", getMinKeys())
+	fmt.Printf("minChilds : %d\n\n", getMaxKeys())
 	insrt := stringToSlice(insert)
 	t := newTree(insrt)
 	eld := stringToSlice(delete)
+	fmt.Printf("insert : %d delete : %d\n", len(insrt), len(eld))
 	fmt.Println(eld)
 	deleteItems(t, eld, true)
 }
@@ -56,7 +59,7 @@ func createRandArray(size int) []int {
 	arr := make([]int, size)
 	m := make(map[int]struct{})
 	for len(m) != size {
-		key := rand.Intn(1000) + 1
+		key := rand.Intn(size*10) + 1
 		m[key] = struct{}{}
 	}
 
@@ -67,20 +70,21 @@ func createRandArray(size int) []int {
 	}
 	return arr
 }
-// [962 28 887 73 902 861 20 282 430 491 585 821 979 855 140 900 672 286 573 993] [672 430 20 900 962 821 28 902 585 573 855 73 861 887 140 491 979 993 282 286]
-// [190 497 69 237 482 988 60 644 609 768] [60 988 644 482 237 768 69 609 190 497]
-func Test_tree_delete(t1 *testing.T) {
-	numKeys := 10
+// [20 8 9 29 16 4 79 80 93 1] [1 8 29 93 16 80 20 9 79 4]
+
+func Test_tree_delete_randomised(t1 *testing.T) {
+	numKeys := 100000
 	tempValues := createRandArray(numKeys)
 
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 1000; i++ {
 		insert := getRandomSlice(tempValues)
 		deleteElm := getRandomSlice(tempValues)
 		fmt.Println(insert, deleteElm)
+		fmt.Printf("insert : %d delete : %d\n", len(insert), len(deleteElm))
 		fmt.Println()
 		t := newTree(insert)
 		deleteItems(t, deleteElm, false)
-		fmt.Printf("------------   done  ------------------\n\n")
+		fmt.Printf("------------   done : %d  ------------------\n\n", i+1)
 	}
 }
 
@@ -126,6 +130,10 @@ func deleteItems(t *tree, deleteElm []int, dispaly bool) {
 			if t.root != nil {
 				fmt.Printf("------------------------------\n")
 			}
+		}
+		val := t.Get(key)
+		if val == key{
+			panic("key is not deleted")
 		}
 	}
 	if t.root != nil {
