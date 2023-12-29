@@ -4,27 +4,6 @@ import (
 	"fmt"
 	"sort"
 )
-// value of degree starts from 3 which is minKey 1 and maxKey = 2
-const (
-	// degree represents max number of chids in one node
-	degree int = 100 //minKey = 1, maxKey = 2
-)
-
-func getMinChilds() int {
-	return (degree + 1) / 2
-}
-
-func getMaxChilds() int {
-	return degree
-}
-
-func getMinKeys() int {
-	return (degree+1)/2 - 1
-}
-
-func getMaxKeys() int {
-	return degree - 1
-}
 
 // insertAt inserts a value into the given index, pushing all subsequent values
 // forward.
@@ -79,20 +58,28 @@ type node struct {
 	childs []*node
 }
 
-func (n *node) removeChild() {
-
-}
-
-func (n *node) del(key int) {
-
-}
-
 type tree struct {
-	root *node
+	root   *node
+	degree int
 }
 
-// 20 30 50
-// 10 | 20 | 30 | 40 50
+func New(degree int) *tree {
+	return &tree{
+		degree: degree,
+	}
+}
+
+func (t *tree) getMinKeys() int { return (t.degree+1)/2 - 1 }
+
+func (t *tree) getMaxKeys() int { return t.degree - 1 }
+
+func (t *tree) getMinChilds() int { return (t.degree + 1) / 2 }
+
+func (t *tree) getMaxChilds() int { return t.degree }
+
+func (n *node) removeChild() {}
+
+func (n *node) del(key int) {}
 
 // find node will return first node where the key may present from given n
 func findNode(n *node, key int) (*node, int) {
@@ -261,7 +248,7 @@ func (t *tree) insert(n *node, i int, key int, value int) {
 		return
 	}
 
-	mx := getMaxKeys()
+	mx := t.getMaxKeys()
 	insertAt[int](&n.keys, i, key)
 	if n.isLeaf {
 		insertAt[int](&n.values, i, value)
@@ -335,14 +322,14 @@ func getSmallest(n *node) int {
 
 // merging will only happen for the root nodes
 // for deletion in the intermediate node only replacement happen
-func (n *node) balanceV2(key int) {
+func (n *node) balanceV2(key int, minKeys int) {
 	p := n.parent
-	if len(n.keys) >= getMinKeys() || p == nil {
+	if len(n.keys) >= minKeys || p == nil {
 		return
 	}
 
-   minKey := key
-	if len(n.keys) > 0{
+	minKey := key
+	if len(n.keys) > 0 {
 		minKey = n.keys[0]
 	}
 
@@ -350,7 +337,7 @@ func (n *node) balanceV2(key int) {
 
 	// BORROW LOGIC
 	l := getLeftNode(n, myNodeInd)
-	if l != nil && len(l.keys) > getMinKeys() {
+	if l != nil && len(l.keys) > minKeys {
 		if n.isLeaf {
 			// direct borrow and change the parent of current node
 			n.borrow(l, len(l.keys)-1, 0)
@@ -370,7 +357,7 @@ func (n *node) balanceV2(key int) {
 	}
 
 	r := getRightNode(n, myNodeInd)
-	if r != nil && len(r.keys) > getMinKeys() {
+	if r != nil && len(r.keys) > minKeys {
 		if n.isLeaf {
 			n.borrow(r, 0, len(n.keys))
 			r.parent.keys[myNodeInd] = r.keys[0]
@@ -412,10 +399,10 @@ func (n *node) balanceV2(key int) {
 		truncate[int](&right.keys, 0)
 		truncate[int](&right.values, 0)
 		if len(left.parent.keys) == 0 {
-			left.parent.balanceV2(key)
+			left.parent.balanceV2(key, minKey)
 			return
 		}
-		left.parent.balanceV2(left.parent.keys[0])
+		left.parent.balanceV2(left.parent.keys[0], minKey)
 		return
 	}
 	parent := left.parent
@@ -432,41 +419,10 @@ func (n *node) balanceV2(key int) {
 	removeAt[*node](&parent.childs, rightNodeInd)
 	right.parent = nil
 	if len(parent.keys) == 0 {
-		parent.balanceV2(key)
+		parent.balanceV2(key, minKey)
 		return
 	}
-	parent.balanceV2(parent.keys[0])
-	// return
-	// }
-
-	// c1 := 0
-	// c2 := 0
-	// cp := make([]*node, len(parent.childs))
-	// copy(cp, parent.childs)
-	// truncate[*node](&parent.childs, 0)
-
-	// for _, nn := range cp {
-	// 	for _, key := range nn.keys {
-	// 		insertAt[int](&parent.keys, c1, key)
-	// 		c1++
-	// 	}
-	// 	truncate[int](&nn.keys, 0)
-	// 	for _, child := range nn.childs {
-	// 		insertAt[*node](&parent.childs, c2, child)
-	// 		child.parent = parent
-	// 		c2++
-	// 	}
-	// 	truncate[*node](&nn.childs, 0)
-	// 	nn.childs = nil
-	// 	nn.parent = nil
-	// 	// to keep the key in the parent
-	// 	c1++
-	// }
-	// if len(parent.keys) == 0 {
-	// 	parent.balanceV2(key)
-	// 	return
-	// }
-	// parent.balanceV2(parent.keys[0])
+	parent.balanceV2(parent.keys[0], minKey)
 }
 
 func (t *tree) delete(key int) {
@@ -481,7 +437,7 @@ func (t *tree) delete(key int) {
 	if nn.isLeaf {
 		removeAt[int](&nn.values, ii)
 	}
-	nn.balanceV2(key)
+	nn.balanceV2(key, t.getMinKeys())
 
 	nn, ii = findNode(t.root, key)
 	// remove key and value
@@ -530,73 +486,3 @@ func (t *tree) Delete(key int) {
 		t.root.parent = nil
 	}
 }
-
-// func (n *node) rebalance() {
-
-// 	// Root node has special handling.
-// 	if n.parent == nil {
-// 		// If root node is a branch and only has one node then collapse it.
-// 		if !n.isLeaf && len(n.keys) == 1 {
-// 			// Move root's child up.
-// 			// find the first child
-// 			cInd := findChildInd(n, n.childs[0].keys[0])
-// 			child := n.childs[cInd]
-// 			n.isLeaf = child.isLeaf
-// 			n.keys = child.keys[:]
-// 			n.childs = child.childs
-
-// 			// Reparent all child nodes being moved.
-// 			for _, inode := range n.childs {
-// 				if inode.childs != nil {
-// 					child.parent = n
-// 				}
-// 			}
-
-// 			// Remove old child.
-// 			child.parent = nil
-// 		}
-
-// 		return
-// 	}
-
-// 	// If node has no keys then just remove it.
-// 	if len(n.childs) == 0 {
-// 		n.parent.del(n.key)
-// 		n.parent.removeChild(n)
-// 		delete(n.bucket.nodes, n.pgid)
-// 		n.free()
-// 		n.parent.rebalance()
-// 		return
-// 	}
-
-// 	// Merge with right sibling if idx == 0, otherwise left sibling.
-// 	var leftNode, rightNode *node
-// 	var useNextSibling = n.parent.childIndex(n) == 0
-// 	if useNextSibling {
-// 		leftNode = n
-// 		rightNode = n.nextSibling()
-// 	} else {
-// 		leftNode = n.prevSibling()
-// 		rightNode = n
-// 	}
-
-// 	// If both nodes are too small then merge them.
-// 	// Reparent all child nodes being moved.
-// 	for _, inode := range rightNode.keys {
-// 		if child, ok := n.bucket.nodes[inode.Pgid()]; ok {
-// 			child.parent.removeChild(child)
-// 			// first it has changed its parent and then added own self as a child in parent
-// 			child.parent = leftNode
-// 			child.parent.children = append(child.parent.children, child)
-// 		}
-// 	}
-
-// 	// Copy over keys from right node to left node and remove right node.
-// 	leftNode.keys = append(leftNode.keys, rightNode.keys...)
-// 	n.parent.del(rightNode.key)
-// 	n.parent.removeChild(rightNode)
-// 	delete(n.bucket.nodes, rightNode.pgid)
-
-// 	// Either this node or the sibling node was deleted from the parent so rebalance it.
-// 	n.parent.rebalance()
-// }

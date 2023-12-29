@@ -8,6 +8,35 @@ import (
 	"testing"
 )
 
+func Test_tree_delete_randomised(t1 *testing.T) {
+	randomeInsert := 30
+	// make sure that you will set a small value in case of printing
+	printOnTerminal := false
+	for degree := 3; degree < 100; degree++ {
+		for numKeys := 1; numKeys < 10000; numKeys += degree {
+			tempValues := createRandArray(numKeys)
+			for i := 0; i < randomeInsert; i++ {
+				insert := getRandomSlice(tempValues)
+				deleteElm := getRandomSlice(tempValues)
+
+				if printOnTerminal {
+					fmt.Println(insert, deleteElm)
+					fmt.Printf("insert : %d delete : %d\n", len(insert), len(deleteElm))
+					fmt.Println()
+				}
+
+				t := newTree(insert, degree, printOnTerminal)
+				deleteItems(t, deleteElm, false)
+
+				if printOnTerminal {
+					fmt.Printf("------------   done : %d  ------------------\n\n", i+1)
+				}
+			}
+		}
+	}
+	fmt.Println("done mission completed")
+}
+
 func Test_tree_Put(t1 *testing.T) {
 	t := tree{}
 	keys := []int{5, 15, 25, 35, 45}
@@ -43,12 +72,13 @@ func Test_tree_Delete(t1 *testing.T) {
 }
 
 func Test_separate(t1 *testing.T) {
+	degree := 3
 	insert := "20 50 24 5 42"
 	delete := "5 50 20 42 24"
-	fmt.Printf("minChilds : %d\n\n", getMinKeys())
-	fmt.Printf("minChilds : %d\n\n", getMaxKeys())
 	insrt := stringToSlice(insert)
-	t := newTree(insrt)
+	t := newTree(insrt, degree, true)
+	fmt.Printf("minChilds : %d\n\n", t.getMinKeys())
+	fmt.Printf("minChilds : %d\n\n", t.getMaxKeys())
 	eld := stringToSlice(delete)
 	fmt.Printf("insert : %d delete : %d\n", len(insrt), len(eld))
 	fmt.Println(eld)
@@ -70,23 +100,8 @@ func createRandArray(size int) []int {
 	}
 	return arr
 }
+
 // [20 8 9 29 16 4 79 80 93 1] [1 8 29 93 16 80 20 9 79 4]
-
-func Test_tree_delete_randomised(t1 *testing.T) {
-	numKeys := 100000
-	tempValues := createRandArray(numKeys)
-
-	for i := 0; i < 1000; i++ {
-		insert := getRandomSlice(tempValues)
-		deleteElm := getRandomSlice(tempValues)
-		fmt.Println(insert, deleteElm)
-		fmt.Printf("insert : %d delete : %d\n", len(insert), len(deleteElm))
-		fmt.Println()
-		t := newTree(insert)
-		deleteItems(t, deleteElm, false)
-		fmt.Printf("------------   done : %d  ------------------\n\n", i+1)
-	}
-}
 
 func getRandomSlice(a []int) []int {
 	temp := make([]int, len(a))
@@ -111,13 +126,15 @@ func stringToSlice(s string) []int {
 	return res
 }
 
-func newTree(insertElm []int) *tree {
-	t := &tree{}
+func newTree(insertElm []int, degree int, printOnTerminal bool) *tree {
+	t := New(degree)
 	for i, key := range insertElm {
 		t.Put(key, i)
 	}
-	display(t)
-	fmt.Printf("---------------tree---------------\n\n")
+	if printOnTerminal {
+		display(t)
+		fmt.Printf("---------------tree---------------\n\n")
+	}
 	return t
 }
 
@@ -132,7 +149,7 @@ func deleteItems(t *tree, deleteElm []int, dispaly bool) {
 			}
 		}
 		val := t.Get(key)
-		if val == key{
+		if val == key {
 			panic("key is not deleted")
 		}
 	}
