@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func printNode(node *node) string {
+func printNode[T1 Comparable, T2 any](node *node[T1, T2]) string {
 	r := make([]string, 0)
 	for _, val := range node.keys {
 		r = append(r, fmt.Sprintf("%v ", val))
@@ -13,22 +13,22 @@ func printNode(node *node) string {
 	return strings.Join(r, "")
 }
 
-func display(t *tree) {
+func display[T1 Comparable, T2 any](t *tree[T1, T2]) {
 	if t.root == nil {
 		return
 	}
 
 	n := t.root
-	stack := make([][]*node, 0)
+	stack := make([][]*node[T1, T2], 0)
 
-	stack = append(stack, []*node{n})
-	bigStack := make([][]*node, 0)
+	stack = append(stack, []*node[T1, T2]{n})
+	bigStack := make([][]*node[T1, T2], 0)
 
 	for len(stack) > 0 {
 		curr := stack[0]
 		bigStack = append(bigStack, curr)
 		stack = stack[1:]
-		currNode := make([]*node, 0)
+		currNode := make([]*node[T1, T2], 0)
 		for _, s := range curr {
 			if s.childs == nil {
 				continue

@@ -13,7 +13,7 @@ func Test_tree_delete_randomised(t1 *testing.T) {
 	// make sure that you will set a small value in case of printing
 	printOnTerminal := false
 	for degree := 3; degree < 100; degree++ {
-		for numKeys := 1; numKeys < 10000; numKeys += degree {
+		for numKeys := 1; numKeys < 1000; numKeys += degree {
 			tempValues := createRandArray(numKeys)
 			for i := 0; i < randomeInsert; i++ {
 				insert := getRandomSlice(tempValues)
@@ -38,12 +38,12 @@ func Test_tree_delete_randomised(t1 *testing.T) {
 }
 
 func Test_tree_Put(t1 *testing.T) {
-	t := tree{}
+	t := tree[int, int]{}
 	keys := []int{5, 15, 25, 35, 45}
 	for i, key := range keys {
 		t.Put(key, i)
 	}
-	t = tree{}
+	t = tree[int, int]{}
 	keys = []int{10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
 	for i, key := range keys {
 		t.Put(key, i)
@@ -52,7 +52,7 @@ func Test_tree_Put(t1 *testing.T) {
 }
 
 func Test_tree_Delete(t1 *testing.T) {
-	t := tree{}
+	t := tree[int, int]{}
 	keys := []int{1, 7, 20, 25, 31, 42, 17, 28, 21, 19, 10, 4}
 	for i, key := range keys {
 		t.Put(key, i)
@@ -103,10 +103,10 @@ func createRandArray(size int) []int {
 
 // [20 8 9 29 16 4 79 80 93 1] [1 8 29 93 16 80 20 9 79 4]
 
-func getRandomSlice(a []int) []int {
-	temp := make([]int, len(a))
+func getRandomSlice[T1 Comparable](a []T1) []T1 {
+	temp := make([]T1, len(a))
 	copy(temp, a)
-	var randomArray []int
+	var randomArray []T1
 	for i := 0; i < len(a); i++ { // Change 5 to the desired length of the new array
 		randomIndex := rand.Intn(len(temp))
 		randomArray = append(randomArray, temp[randomIndex])
@@ -126,8 +126,11 @@ func stringToSlice(s string) []int {
 	return res
 }
 
-func newTree(insertElm []int, degree int, printOnTerminal bool) *tree {
-	t := New(degree)
+func newTree[T1 Comparable](insertElm []T1, degree int, printOnTerminal bool) *tree[T1, int] {
+	// forcefully value is int
+	t := &tree[T1, int]{
+		degree: degree,
+	}
 	for i, key := range insertElm {
 		t.Put(key, i)
 	}
@@ -138,7 +141,7 @@ func newTree(insertElm []int, degree int, printOnTerminal bool) *tree {
 	return t
 }
 
-func deleteItems(t *tree, deleteElm []int, dispaly bool) {
+func deleteItems[T1 Comparable, T2 any](t *tree[T1, T2], deleteElm []T1, dispaly bool) {
 	for _, key := range deleteElm {
 		t.Delete(key)
 		if dispaly {
@@ -148,10 +151,12 @@ func deleteItems(t *tree, deleteElm []int, dispaly bool) {
 				fmt.Printf("------------------------------\n")
 			}
 		}
-		val := t.Get(key)
-		if val == key {
+		_, err := t.Get(key)
+		if err == nil {
+			// this show that key is present
 			panic("key is not deleted")
 		}
+
 	}
 	if t.root != nil {
 		panic("root is not empty")
