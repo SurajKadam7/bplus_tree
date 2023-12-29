@@ -72,7 +72,12 @@ type tree[T1 Comparable, T2 any] struct {
 	degree int
 }
 
+// New will take degree and return Tree
+// minimum value of degree possible is 3
 func New[T1 Comparable, T2 any](degree int) BPTree[T1, T2] {
+	if degree < 3 {
+		degree = 3
+	}
 	return &tree[T1, T2]{
 		degree: degree,
 	}
@@ -458,6 +463,7 @@ func (t *tree[T1, T2]) delete(key T1) (err error) {
 	nn.keys[ii] = getSmallest(nn.childs[ii+1])
 	return nil
 }
+
 // Put add given key and value into the tree and return error if any
 func (t *tree[T1, T2]) Put(key T1, value T2) (err error) {
 	if t.root == nil {
